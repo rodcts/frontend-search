@@ -2,7 +2,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Button,
   Picker,
   ScrollView,
@@ -70,20 +69,38 @@ const ResultView = ({ resultado }) => (
   </View>
 );
 
+// --- MELHORIA 3: Componente de Erro Dedicado ---
+// Substituir Alertas nativos por um componente de UI integrado
+// melhora a experiência do usuário, mantendo-o no fluxo do app.
+const ErrorView = ({ message }) => {
+  if (!message) {
+    return null;
+  }
+  return (
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorText}>{message}</Text>
+    </View>
+  );
+};
+
 export default function HomeScreen() {
   const [produto, setProduto] = useState("");
   const [estado, setEstado] = useState(DEFAULT_ESTADO);
   const [resultado, setResultado] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const avaliarProduto = async () => {
+    // Limpa o erro e o resultado anterior antes de uma nova busca
+    setError(null);
+    setResultado(null);
+
     if (!produto.trim()) {
-      Alert.alert("Erro", "Por favor, insira o nome do produto.");
+      setError("Por favor, insira o nome do produto.");
       return;
     }
 
     setLoading(true);
-    setResultado(null);
 
     try {
       const response = await fetch(API_URL, {
@@ -102,16 +119,12 @@ export default function HomeScreen() {
       if (response.status === 200) {
         setResultado(data);
       } else {
-        Alert.alert(
-          "Erro na API",
-          data.detail || "Não foi possível avaliar o produto.",
-        );
+        setError(data.detail || "Não foi possível avaliar o produto.");
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert(
-        "Erro de Conexão",
-        "Não foi possível conectar ao servidor Python. Verifique o IP e a porta.",
+    } catch (e) {
+      console.error(e);
+      setError(
+        "Erro de Conexão: Não foi possível conectar ao servidor. Verifique o IP e a porta.",
       );
     } finally {
       setLoading(false);
@@ -148,6 +161,8 @@ export default function HomeScreen() {
         onPress={avaliarProduto}
         disabled={loading}
       />
+
+      {error && <ErrorView message={error} />}
 
       {loading && (
         <ActivityIndicator
@@ -235,6 +250,20 @@ const styles = StyleSheet.create({
   smallText: {
     fontSize: 14,
     color: "#666",
+    textAlign: "center",
+  },
+  errorContainer: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: "#fff0f0",
+    borderColor: "#d9534f",
+    borderWidth: 1,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  errorText: {
+    color: "#d9534f",
+    fontSize: 16,
     textAlign: "center",
   },
 });
